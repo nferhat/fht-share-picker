@@ -1,9 +1,9 @@
-use iced::alignment::Horizontal;
 use iced::widget::{column, container, row, text, vertical_space, Canvas};
-use iced::Length;
+use iced::{Alignment, Length, Task};
 use sctk::output::{OutputHandler, OutputState};
 use sctk::reexports::client as wl_client;
 use sctk::registry::{ProvidesRegistryState, RegistryState};
+use fht_iced as theme;
 use smithay_client_toolkit as sctk;
 
 const APP_ID: &str = "fht.desktop.ScreenShareSourcePicker";
@@ -11,7 +11,6 @@ const TEXT_SIZE: f32 = 14.0;
 
 mod font;
 mod output_grid;
-mod theme;
 
 fn main() -> iced::Result {
     let settings = iced::Settings {
@@ -24,7 +23,9 @@ fn main() -> iced::Result {
 
     iced::application("Select your desired output", App::update, App::view)
         .settings(settings)
-        .run_with(App::new)
+        .run_with(|| {
+            (App::new(), Task::none())
+        })
 }
 
 #[derive(Default)]
@@ -132,10 +133,10 @@ impl App {
         }
     }
 
-    fn update(&mut self, message: Message) -> iced::Task<Message> {
+    fn update(&mut self, message: Message) -> Task<Message> {
         #[allow(irrefutable_let_patterns)]
         let Message::OutputSelected(name) = message else {
-            return iced::Task::none()
+            return Task::none()
         };
 
         eprintln!("[select-output]/{name}");
@@ -157,17 +158,17 @@ impl App {
             .push(
                 container(
                     text("Please select your desired output")
-                        .horizontal_alignment(Horizontal::Center),
+                        .align_x(Alignment::Center),
                 )
                 .center_x(Length::Fill),
             )
             .push(
                 container(row![
                     text(self.program_name)
-                        .horizontal_alignment(Horizontal::Center)
+                        .align_x(Alignment::Center)
                         .style(theme::text::accent),
                     text(" wants to start a screecast session")
-                        .horizontal_alignment(Horizontal::Center),
+                        .align_x(Alignment::Center),
                 ])
                 .center_x(Length::Fill),
             )
@@ -180,6 +181,11 @@ impl App {
                     .center_x(Length::Fill),
             );
 
-        container(content).padding(10).fill().into()
+        container(content)
+            .padding(10)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .style(theme::container::primary)
+            .into()
     }
 }
