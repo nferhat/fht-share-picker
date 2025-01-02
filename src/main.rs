@@ -47,6 +47,10 @@ fn main() -> glib::ExitCode {
     OUTPUT_PATH
         .set(std::path::PathBuf::from_str(&path).unwrap())
         .unwrap();
+    if !OUTPUT_PATH.get().unwrap().exists() {
+        error!("You must specify a file path that exists!");
+        std::process::exit(1);
+    }
 
     glib::set_application_name("fht-share-picker");
     glib::log_set_default_handler(glib::rust_log_handler);
