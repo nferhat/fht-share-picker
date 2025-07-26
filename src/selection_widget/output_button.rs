@@ -2,13 +2,14 @@ use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
-use crate::output_info::OutputObject;
+use crate::output_object::OutputObject;
 use crate::utils::make_output_mode_string;
 
 mod imp {
+    use std::cell::RefCell;
+
     use glib::Binding;
     use gtk::CompositeTemplate;
-    use std::cell::RefCell;
 
     use super::*;
 

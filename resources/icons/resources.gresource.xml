@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<gresources>
-    <gresource prefix="/fht/desktop/SharePicker/icons/scalable/actions">
-      <file preprocess="xml-stripblanks">shell-overview-symbolic.svg</file>
-      <file preprocess="xml-stripblanks">video-display-symbolic.svg</file>
-      <file preprocess="xml-stripblanks">window-symbolic.svg</file>
-    </gresource>
-</gresources>

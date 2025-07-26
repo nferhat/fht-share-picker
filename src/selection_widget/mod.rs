@@ -10,16 +10,18 @@ mod output_grid;
 mod window_row;
 mod workspace_row;
 
-use crate::output_info::OutputObject;
-use crate::screencast_source::ScreencastSource;
-use crate::utils::forall_siblings;
-use crate::window_info::WindowObject;
 use output_grid::OutputGrid;
 use window_row::WindowRow;
 use workspace_row::WorkspaceRow;
 
+use crate::output_object::OutputObject;
+use crate::utils::forall_siblings;
+use crate::window_object::WindowObject;
+use crate::ScreencastSource;
+
 mod imp {
-    use std::{cell::RefCell, sync::OnceLock};
+    use std::cell::RefCell;
+    use std::sync::OnceLock;
 
     use glib::subclass::Signal;
     use glib::types::StaticType;
@@ -102,10 +104,12 @@ glib::wrapper! {
 impl SelectionWidget {
     fn setup_values(&self) {
         let imp = self.imp();
-        let (outputs, foreign_windows) = crate::utils::get_data();
+        // Gather info from compositor.
+        // This program shouldn't be used outside of the compositor so its fine if we panic.
+        let (windows, outputs) = crate::get_compositor_data().unwrap();
 
         let model = gio::ListStore::new::<WindowObject>();
-        model.extend_from_slice(&foreign_windows);
+        model.extend_from_slice(&windows);
         imp.windows.replace(Some(model));
 
         let model = gio::ListStore::new::<OutputObject>();
@@ -125,9 +129,8 @@ impl SelectionWidget {
             move |_, row| {
                 let selection = row.map(|row| {
                     let row = row.downcast_ref::<WindowRow>().unwrap();
-                    ScreencastSource::Window {
-                        foreign_toplevel_handle: row.identifier(),
-                    }
+                    let id = row.identifier() as usize;
+                    ScreencastSource::Window { id }
                 });
 
                 imp.set_selection(selection);
@@ -210,15 +213,8 @@ impl SelectionWidget {
 
             // FIXME: I don't really like how much duplication there is within the output grid code
             // But for now I don't really know how todo it better ngl
-            imp.output_grid.add_output(
-                &output_button.upcast(),
-                (
-                    output.position_x(),
-                    output.position_y(),
-                    output.size_w(),
-                    output.size_h(),
-                ),
-            );
+            imp.output_grid
+                .add_output(&output_button.upcast(), output.rect());
         }
 
         // Whenever there's a page switch, we reset the selection

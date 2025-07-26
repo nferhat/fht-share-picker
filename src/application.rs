@@ -1,13 +1,16 @@
-use crate::application_window::Window;
 use gtk::subclass::prelude::*;
-use gtk::{gio, glib};
+use gtk::{gdk, gio, glib};
+
+use crate::application_window::Window;
 
 mod imp {
-    use std::{cell::OnceCell, io::Write};
+    use std::cell::OnceCell;
+    use std::io::Write;
 
     use adw::subclass::prelude::AdwApplicationImpl;
     use gio::prelude::ApplicationExt;
-    use glib::{object::ObjectExt, WeakRef};
+    use glib::object::ObjectExt;
+    use glib::WeakRef;
     use gtk::prelude::GtkWindowExt;
 
     use super::*;
@@ -51,15 +54,8 @@ mod imp {
                     None,
                     move |args| {
                         let json_content: String = args[1].get().unwrap();
-                        let mut file = std::fs::OpenOptions::new()
-                            .write(true)
-                            .open(crate::OUTPUT_PATH.get().expect("set at startup"))
-                            .unwrap();
-                        file.set_len(0).unwrap();
-                        file.write(json_content.as_bytes()).unwrap();
-
+                        std::io::stdout().write(json_content.as_bytes()).unwrap();
                         imp.obj().quit();
-
                         None
                     }
                 ),
@@ -73,6 +69,18 @@ mod imp {
                 .set(ObjectExt::downgrade(&window))
                 .expect("Window already set.");
             app.main_window().present();
+        }
+
+        fn startup(&self) {
+            self.parent_startup();
+            let provider = gtk::CssProvider::new();
+            provider.load_from_resource("/fht/desktop/SharePicker/output-grid.css");
+            // Add the provider to the default screen
+            gtk::style_context_add_provider_for_display(
+                &gdk::Display::default().expect("Could not connect to a display."),
+                &provider,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
         }
     }
 

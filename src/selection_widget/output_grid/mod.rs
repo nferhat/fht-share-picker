@@ -1,8 +1,8 @@
 mod layout;
 
-use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
+use gtk::{gdk, glib};
 
 use super::output_button::OutputButton;
 
@@ -49,7 +49,7 @@ glib::wrapper! {
 }
 
 impl OutputGrid {
-    pub fn add_output(&self, widget: &OutputButton, rect: (i32, i32, i32, i32)) {
+    pub fn add_output(&self, widget: &OutputButton, rect: gdk::Rectangle) {
         widget.set_parent(self);
         let layout_mgr = self.layout_manager().unwrap();
         let output_layout_mgr = layout_mgr

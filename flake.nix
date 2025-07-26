@@ -26,41 +26,8 @@
         # NOTE: This is for the Nix code formatter!!
         formatter = pkgs.alejandra;
 
-        packages = let
-          fht-share-picker-package = {
-            lib,
-            glib,
-            gtk4,
-            libadwaita,
-            libxkbcommon,
-            pkg-config,
-            rustPlatform,
-          }:
-            rustPlatform.buildRustPackage {
-              pname = "fht-share-picker";
-              version = self.shortRev or self.dirtyShortRev or "unknown";
-              src = ./.;
-
-              cargoLock = {
-                # sctk is pulled from git
-                allowBuiltinFetchGit = true;
-                lockFile = ./Cargo.lock;
-              };
-
-              strictDeps = true;
-              # NOTE: We need glib in nativeBuildInputs for glib-compile-resources
-              nativeBuildInputs = [rustPlatform.bindgenHook pkg-config glib];
-              buildInputs = [glib gtk4 libadwaita libxkbcommon];
-
-              meta = {
-                homepage = "https://github.com/nferht/fht-share-picker";
-                license = lib.licenses.gpl3Only;
-                mainProgram = "fht-share-picker";
-                platforms = lib.platforms.linux;
-              };
-            };
-        in rec {
-          fht-share-picker = pkgs.callPackage fht-share-picker-package {};
+        packages = rec {
+          fht-share-picker = pkgs.callPackage ./. {};
           default = fht-share-picker;
         };
 
@@ -76,17 +43,10 @@
                 toolchain.default.override {
                   extensions = ["rust-analyzer" "rust-src"];
                 }))
-
-              pkgs.alejandra # for formatting this flake if needed
-
-              # The base libraries needed for a gtk application
-              # libxkbcommon for sctk since I use it to bind protocols
-              glib
-              gtk4
-              libadwaita
-              libxkbcommon
+              alejandra # for formatting this flake if needed
             ];
 
+            buildInputs = with pkgs; [glib gtk4 libadwaita libxkbcommon];
             nativeBuildInputs = with pkgs; [rustPlatform.bindgenHook pkg-config];
           };
       };

@@ -2,7 +2,7 @@ use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
-use crate::window_info::WindowObject;
+use crate::window_object::WindowObject;
 
 mod imp {
     use std::cell::RefCell;
@@ -15,9 +15,8 @@ mod imp {
     #[derive(Default, Debug, Properties)]
     #[properties(wrapper_type = super::WindowRow)]
     pub struct WindowRow {
-        #[property(name = "identifier", get, set, type = String)]
-        pub properties: RefCell<String>,
-
+        #[property(get, set, type = u64)]
+        pub identifier: RefCell<u64>,
         pub bindings: RefCell<Vec<Binding>>,
     }
 
@@ -43,7 +42,7 @@ mod imp {
 
 glib::wrapper! {
     pub struct WindowRow(ObjectSubclass<imp::WindowRow>)
-        @extends adw::ActionRow, gtk::ListBoxRow, gtk::Box, gtk::Widget,
+        @extends adw::ActionRow, gtk::ListBoxRow, adw::PreferencesRow, gtk::Box, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
 }
 

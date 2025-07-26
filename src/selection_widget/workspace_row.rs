@@ -1,10 +1,9 @@
-use adw::prelude::ExpanderRowExt;
-use adw::prelude::PreferencesRowExt;
+use adw::prelude::{ExpanderRowExt, PreferencesRowExt};
 use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 
-use crate::output_info::OutputObject;
+use crate::output_object::OutputObject;
 use crate::utils::make_output_mode_string;
 
 mod imp {
@@ -13,9 +12,8 @@ mod imp {
     use glib::subclass::Signal;
     use gtk::CompositeTemplate;
 
-    use crate::utils::forall_siblings;
-
     use super::*;
+    use crate::utils::forall_siblings;
 
     #[derive(Default, Debug, CompositeTemplate)]
     #[template(resource = "/fht/desktop/SharePicker/ui/workspace-row.ui")]

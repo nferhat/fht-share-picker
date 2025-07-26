@@ -1,21 +1,31 @@
-use gtk::glib;
 use gtk::prelude::LayoutManagerExt;
 use gtk::subclass::prelude::*;
+use gtk::{gdk, glib};
 
 use crate::selection_widget::output_button::OutputButton;
 
 mod imp {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+
     use gtk::prelude::WidgetExt;
-    use std::{cell::RefCell, collections::HashMap};
 
     pub use super::*;
 
-    #[derive(Default)]
     pub struct OutputGridLayout {
         // Rectangles are tuples, with values in order (x, y, w, h)
         // TODO: I don't like the fact I am keeping strong references to the children
-        pub output_geometries: RefCell<HashMap<OutputButton, (i32, i32, i32, i32)>>,
-        pub total_area: RefCell<(i32, i32, i32, i32)>,
+        pub output_geometries: RefCell<HashMap<OutputButton, gdk::Rectangle>>,
+        pub total_area: RefCell<gdk::Rectangle>,
+    }
+
+    impl Default for OutputGridLayout {
+        fn default() -> Self {
+            Self {
+                output_geometries: RefCell::default(),
+                total_area: RefCell::new(gdk::Rectangle::new(0, 0, 0, 0)),
+            }
+        }
     }
 
     #[glib::object_subclass]
@@ -44,7 +54,8 @@ mod imp {
             for_size: i32,
         ) -> (i32, i32, i32, i32) {
             let horizontal = orientation == gtk::Orientation::Horizontal;
-            let (_, _, width, height) = *self.total_area.borrow();
+            let area = self.total_area.borrow();
+            let (width, height) = (area.width(), area.height());
 
             let (main_size, secondary_size) = if horizontal {
                 (width, height)
@@ -77,23 +88,27 @@ mod imp {
                 return;
             }
 
-            let (area_x, area_y, area_w, area_h) = *self.total_area.borrow();
-            let scale = f32::min(width as f32 / area_w as f32, height as f32 / area_h as f32);
+            let area = self.total_area.borrow();
+            let scale = f32::min(
+                width as f32 / area.width() as f32,
+                height as f32 / area.height() as f32,
+            );
             let scale = (scale * 10.).round() / 10.;
-            let translate_x = (width as f32 - scale * area_w as f32) / 2.;
-            let translate_y = (height as f32 - scale * area_h as f32) / 2.;
+            let translate_x = (width as f32 - scale * area.width() as f32) / 2.;
+            let translate_y = (height as f32 - scale * area.height() as f32) / 2.;
 
-            for (child, &(x, y, w, h)) in &*self.output_geometries.borrow() {
+            let (area_x, area_y) = (area.x(), area.y());
+            for (child, rect) in &*self.output_geometries.borrow() {
                 if !child.should_layout() {
                     continue;
                 }
 
                 #[allow(unused_assignments)]
                 let mut x1 @ mut x2 @ mut y1 @ mut y2 = 0f32;
-                x1 = scale * (x - area_x) as f32 + translate_x;
-                y1 = scale * (y - area_y) as f32 + translate_y;
-                x2 = x1 + scale * w as f32;
-                y2 = y1 + scale * h as f32;
+                x1 = scale * (rect.x() - area_x) as f32 + translate_x;
+                y1 = scale * (rect.y() - area_y) as f32 + translate_y;
+                x2 = x1 + scale * rect.width() as f32;
+                y2 = y1 + scale * rect.height() as f32;
 
                 child.size_allocate(
                     &gtk::Allocation::new(
@@ -110,11 +125,12 @@ mod imp {
 
     impl OutputGridLayout {
         pub fn measure_scale(&self, minimum: &mut f32, natural: &mut f32) {
-            for (child, &(_, _, w, h)) in &*self.output_geometries.borrow() {
+            for (child, rect) in &*self.output_geometries.borrow() {
                 if !child.should_layout() {
                     continue;
                 }
 
+                let (w, h) = (rect.width(), rect.height());
                 let (child_minimum, child_natural, _, _) =
                     child.measure(gtk::Orientation::Horizontal, -1);
                 *minimum = f32::max(*minimum, child_minimum as f32 / w as f32);
@@ -131,13 +147,17 @@ mod imp {
         }
 
         pub fn update_bounds(&self) {
-            let total_area = self
-                .output_geometries
-                .borrow()
-                .values()
-                .fold((0, 0, 0, 0), |(ax, ay, aw, ah), &(x, y, w, h)| {
-                    (x.max(ax), y.max(ay), w.max(aw), h.max(ah))
-                });
+            let total_area = self.output_geometries.borrow().values().fold(
+                gdk::Rectangle::new(0, 0, 0, 0),
+                |acc, rect| {
+                    gdk::Rectangle::new(
+                        acc.x().max(rect.x()),
+                        acc.y().max(rect.y()),
+                        acc.width().max(rect.width()),
+                        acc.height().max(rect.height()),
+                    )
+                },
+            );
 
             *self.total_area.borrow_mut() = total_area;
         }
@@ -154,7 +174,7 @@ impl OutputGridLayout {
         glib::Object::new()
     }
 
-    pub fn add_output(&self, widget: &OutputButton, rect: (i32, i32, i32, i32)) {
+    pub fn add_output(&self, widget: &OutputButton, rect: gdk::Rectangle) {
         let imp = self.imp();
         if !imp.output_geometries.borrow().contains_key(widget) {
             imp.output_geometries

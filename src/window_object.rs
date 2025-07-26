@@ -1,3 +1,7 @@
+//! Window object.
+//!
+//! Wrapper around [`Window`](fht_compositor_ipc::Window) to be used in GTK's ListModel
+
 use glib::Object;
 use gtk::glib;
 use gtk::prelude::*;
@@ -6,18 +10,17 @@ use gtk::subclass::prelude::*;
 mod imp {
     use std::cell::RefCell;
 
-    use glib::Properties;
-    use sctk::foreign_toplevel_list::ForeignToplevelInfo;
-
     use super::*;
 
-    #[derive(Properties, Default)]
+    #[derive(glib::Properties, Default)]
     #[properties(wrapper_type = super::WindowObject)]
     pub struct WindowObject {
-        #[property(name = "identifier", get, set, type = String, member = identifier)]
-        #[property(name = "title", get, set, type = String, member = title)]
-        #[property(name = "app-id", get, set, type = String, member = app_id)]
-        pub data: RefCell<ForeignToplevelInfo>,
+        #[property(get, set, type = u64)]
+        identifier: RefCell<u64>,
+        #[property(get, set, type = String)]
+        title: RefCell<String>,
+        #[property(get, set, type = String)]
+        app_id: RefCell<String>,
     }
 
     // The central trait for subclassing a GObject
@@ -37,9 +40,13 @@ glib::wrapper! {
 }
 
 impl WindowObject {
-    pub fn new<S: AsRef<str>>(identifier: S, title: S, app_id: S) -> Self {
+    pub fn new<Title, AppId>(identifier: u64, title: Title, app_id: AppId) -> Self
+    where
+        Title: AsRef<str>,
+        AppId: AsRef<str>,
+    {
         Object::builder()
-            .property("identifier", identifier.as_ref())
+            .property("identifier", identifier)
             .property("title", title.as_ref())
             .property("app-id", app_id.as_ref())
             .build()
