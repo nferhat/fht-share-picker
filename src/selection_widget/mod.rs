@@ -98,7 +98,8 @@ mod imp {
 glib::wrapper! {
     pub struct SelectionWidget(ObjectSubclass<imp::SelectionWidget>)
         @extends gtk::Widget, gtk::Box,
-        @implements gio::ActionMap, gio::ActionGroup;
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget,
+        gtk::Native, gio::ActionMap, gio::ActionGroup;
 }
 
 impl SelectionWidget {

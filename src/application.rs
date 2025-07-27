@@ -7,10 +7,10 @@ mod imp {
     use std::cell::OnceCell;
     use std::io::Write;
 
+    use ::glib::object::ObjectExt;
+    use ::glib::WeakRef;
     use adw::subclass::prelude::AdwApplicationImpl;
     use gio::prelude::ApplicationExt;
-    use glib::object::ObjectExt;
-    use glib::WeakRef;
     use gtk::prelude::GtkWindowExt;
 
     use super::*;

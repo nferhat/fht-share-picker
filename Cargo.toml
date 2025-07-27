@@ -10,10 +10,10 @@ repository = "https://github.com/nferhat/fht-share-picker"
 lto = true
 
 [dependencies]
-adw = { version = "0.7.1", package = "libadwaita", features = ["v1_6"] }
+adw = { version = "0.8", package = "libadwaita", features = ["v1_6"] }
 fht-compositor-ipc = { git = "https://github.com/nferhat/fht-compositor", version = "25.3.1" }
-glib = { version = "0.20.7", features = ["log"] }
-gtk = { version = "0.9", package = "gtk4", features = ["v4_16"] }
+glib = { version = "0.21", features = ["log"] }
+gtk = { version = "0.10", package = "gtk4", features = ["v4_16"] }
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = "1.0.134"
 tracing = "0.1.37"

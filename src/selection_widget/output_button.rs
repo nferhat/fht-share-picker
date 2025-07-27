@@ -55,7 +55,8 @@ mod imp {
 glib::wrapper! {
     pub struct OutputButton(ObjectSubclass<imp::OutputButton>)
         @extends gtk::ToggleButton, gtk::Button, gtk::Widget,
-        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable,
+        gtk::Actionable;
 }
 
 impl OutputButton {

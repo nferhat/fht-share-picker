@@ -43,7 +43,8 @@ mod imp {
 glib::wrapper! {
     pub struct WindowRow(ObjectSubclass<imp::WindowRow>)
         @extends adw::ActionRow, gtk::ListBoxRow, adw::PreferencesRow, gtk::Box, gtk::Widget,
-        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable,
+        gtk::Actionable;
 }
 
 impl WindowRow {

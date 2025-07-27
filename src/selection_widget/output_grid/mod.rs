@@ -44,7 +44,7 @@ mod imp {
 
 glib::wrapper! {
     pub struct OutputGrid(ObjectSubclass<imp::OutputGrid>)
-        @extends gtk::Widget,
+        @extends gtk::Widget, gtk::Box,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
