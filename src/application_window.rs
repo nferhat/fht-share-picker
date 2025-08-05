@@ -50,6 +50,7 @@ mod imp {
     impl ObjectImpl for Window {
         fn constructed(&self) {
             self.parent_constructed();
+            self.selection_widget.set_window(&self.obj());
             self.selection_widget.connect_local(
                 "selection-changed",
                 false,

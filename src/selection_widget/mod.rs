@@ -1,5 +1,6 @@
 use glib::object::{Cast, ObjectExt};
-use gtk::prelude::{ButtonExt, ListBoxRowExt, ToggleButtonExt, WidgetExt};
+use glib::types::StaticType;
+use gtk::prelude::{ButtonExt, EditableExt, ListBoxRowExt, ToggleButtonExt, WidgetExt};
 use gtk::subclass::box_::BoxImpl;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib};
@@ -20,7 +21,6 @@ use crate::window_object::WindowObject;
 use crate::ScreencastSource;
 
 mod imp {
-    use std::cell::RefCell;
     use std::sync::OnceLock;
 
     use glib::subclass::Signal;
@@ -39,10 +39,8 @@ mod imp {
         pub workspace_list: TemplateChild<gtk::ListBox>,
         #[template_child]
         pub output_grid: TemplateChild<OutputGrid>,
-
-        // Data gathered for selection
-        pub windows: RefCell<Option<gio::ListStore>>,
-        pub outputs: RefCell<Option<gio::ListStore>>,
+        #[template_child]
+        pub window_search_bar: TemplateChild<gtk::SearchBar>,
     }
 
     #[glib::object_subclass]
@@ -109,21 +107,46 @@ impl SelectionWidget {
         // This program shouldn't be used outside of the compositor so its fine if we panic.
         let (windows, outputs) = crate::get_compositor_data().unwrap();
 
+        // Wrap the default model with a string filter to allow searching
         let model = gio::ListStore::new::<WindowObject>();
         model.extend_from_slice(&windows);
-        imp.windows.replace(Some(model));
+        let string_filter = gtk::StringFilter::new(Some(gtk::PropertyExpression::new(
+            WindowObject::static_type(),
+            gtk::Expression::NONE,
+            "title",
+        )));
+        let filter_model = gtk::FilterListModel::builder()
+            .model(&model)
+            .filter(&string_filter)
+            .incremental(true)
+            .build();
+        // Setup search bar
+        let entry = gtk::SearchEntry::builder()
+            .halign(gtk::Align::Center)
+            .valign(gtk::Align::Start)
+            .placeholder_text("Search for a window...")
+            .build();
+        entry.connect_text_notify(glib::clone!(
+            #[strong]
+            string_filter,
+            move |entry| {
+                let text = entry.text();
+                if text.is_empty() {
+                    string_filter.set_search(None)
+                } else {
+                    string_filter.set_search(Some(&text));
+                }
+            }
+        ));
+        imp.window_search_bar.connect_entry(&entry);
+        imp.window_search_bar.set_child(Some(&entry));
 
-        let model = gio::ListStore::new::<OutputObject>();
-        model.extend_from_slice(&outputs);
-        imp.outputs.replace(Some(model));
-
-        imp.window_list
-            .bind_model(Some(imp.windows.borrow().as_ref().unwrap()), |obj| {
-                let window_obj = obj.downcast_ref::<WindowObject>().unwrap();
-                let window_row = WindowRow::new();
-                window_row.bind_window(window_obj);
-                window_row.upcast()
-            });
+        imp.window_list.bind_model(Some(&filter_model), |obj| {
+            let window_obj = obj.downcast_ref::<WindowObject>().unwrap();
+            let window_row = WindowRow::new();
+            window_row.bind_window(window_obj);
+            window_row.upcast()
+        });
         imp.window_list.connect_row_selected(glib::clone!(
             #[weak]
             imp,
@@ -138,12 +161,15 @@ impl SelectionWidget {
             }
         ));
 
+        let outputs_model = gio::ListStore::new::<OutputObject>();
+        outputs_model.extend_from_slice(&outputs);
+
         // The rows in the workspace list are all expander rows, they dont provide much.
         // When expanded, the workspace row shows an index selection list
         imp.workspace_list
             .set_selection_mode(gtk::SelectionMode::None);
         imp.workspace_list.bind_model(
-            Some(imp.outputs.borrow().as_ref().unwrap()),
+            Some(&outputs_model),
             glib::clone!(
                 #[weak]
                 imp,
@@ -223,7 +249,7 @@ impl SelectionWidget {
             #[weak]
             imp,
             move |_| {
-                imp.window_list.select_row(Option::<&adw::ActionRow>::None);
+                // imp.window_list.select_row(Option::<&adw::ActionRow>::None);
 
                 if let Some(first_row) = imp.workspace_list.first_child() {
                     let child = first_row
@@ -254,5 +280,11 @@ impl SelectionWidget {
         ));
 
         imp.set_selection(None);
+    }
+
+    pub fn set_window(&self, window: &crate::application_window::Window) {
+        self.imp()
+            .window_search_bar
+            .set_key_capture_widget(Some(window));
     }
 }
