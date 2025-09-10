@@ -17,8 +17,10 @@ mod window_object;
 mod selection_widget;
 mod utils;
 
-use std::io::{Read, Write};
+use std::io::{BufRead as _, BufReader, Write};
+use std::os::unix::net::UnixStream;
 
+use fht_compositor_ipc::{Request, Response};
 use gtk::prelude::ApplicationExtManual;
 use gtk::{gio, glib};
 use output_object::OutputObject;
@@ -59,18 +61,28 @@ fn main() -> glib::ExitCode {
     app.run()
 }
 
+fn write_req(
+    stream: &mut UnixStream,
+    req: Request,
+) -> Result<Response, Box<dyn std::error::Error>> {
+    let mut req = serde_json::to_string(&req)?;
+    req.push('\n'); // it is required to append a newline.
+    stream.write_all(req.as_bytes()).unwrap();
+
+    let mut reader = BufReader::new(stream);
+    let mut res_buf = String::new();
+    let size = reader.read_line(&mut res_buf)?;
+    assert_eq!(res_buf.len(), size);
+
+    let res = serde_json::de::from_str(&res_buf)?;
+    Ok(res)
+}
+
 fn get_compositor_data(
 ) -> Result<(Vec<WindowObject>, Vec<OutputObject>), Box<dyn std::error::Error>> {
-    use fht_compositor_ipc::{connect, Request, Response};
-    let (_, mut socket) = connect()?;
+    let (_, mut socket) = fht_compositor_ipc::connect()?;
 
-    let mut req = serde_json::to_string(&Request::Outputs)?;
-    req.push('\n');
-    _ = socket.write_all(req.as_bytes())?;
-    let mut res_buf = String::new();
-    _ = socket.read_to_string(&mut res_buf);
-    let outputs: Response = serde_json::from_str(&res_buf)?;
-    let Response::Outputs(outputs) = outputs else {
+    let Response::Outputs(outputs) = write_req(&mut socket, Request::Outputs)? else {
         unreachable!()
     };
     let outputs = outputs
@@ -81,21 +93,14 @@ fn get_compositor_data(
         })
         .collect();
 
-    let (_, mut socket) = connect()?;
-    let mut req = serde_json::to_string(&Request::Windows)?;
-    req.push('\n');
-    _ = socket.write(req.as_bytes())?;
-    let mut res_buf = String::new();
-    _ = socket.read_to_string(&mut res_buf);
-    let windows: Response = serde_json::from_str(&res_buf)?;
-    let Response::Windows(windows) = windows else {
+    let Response::Windows(windows) = write_req(&mut socket, Request::Windows)? else {
         unreachable!()
     };
     let windows = windows
         .into_iter()
-        .map(|win| {
+        .map(|(id, win)| {
             WindowObject::new(
-                win.id as u64,
+                id as u64,
                 win.title.unwrap_or_default(),
                 win.app_id.unwrap_or_default(),
             )
